@@ -43,9 +43,54 @@ class ConsolidatedShipmentLines(ReportMixin, SettingsMixin, InvenTreePlugin):
             )
 
     def consolidated_line_items(self, shipment):
-        """Generate consolidated line items for a given SalesOrderShipment instance."""
+        """Generate consolidated line items for a given SalesOrderShipment instance.
 
-        print("Generating consolidated line items...")
-        print("- shipment:", shipment)
+        Return a list of consolidated line items
+        Each item in the list is a dictionary with keys:
+        - 'line_item': The SalesOrderLineItem instance
+        - 'quantity': Total quantity shipped for that line item
+        - 'serial_numbers': List of serial numbers associated with that line item
+        """
 
-        return {}
+        # Items, grouped by SalesOrderLineItem ID
+        groups = {}
+
+        for allocation in shipment.allocations.all():
+            line_item = allocation.line
+            stock_item = allocation.item
+
+            if line_item.id not in groups:
+                groups[line_item.id] = {
+                    "line_item": line_item,
+                    "stock_items": [],
+                    "quantity": 0,
+                }
+
+            groups[line_item.id]["quantity"] += allocation.quantity
+            groups[line_item.id]["stock_items"].append(stock_item)
+
+        consolidated_items = []
+
+        for data in groups.values():
+            data["serial_numbers"] = self.extract_serial_groups(data["stock_items"])
+            consolidated_items.append(data)
+
+        return consolidated_items
+
+    def extract_serial_groups(self, stock_items) -> str:
+        """Generate a compact string representation of serial number groups."""
+
+        # TODO: Support more "intelligent" serial number grouping.
+        #  - e.g. "1001-1005, 1010, 1012-1015"
+
+        serial_numbers = []
+        sorted_items = sorted(stock_items, key=lambda x: x.serial_int)
+
+        for item in sorted_items:
+            if item.serial:
+                serial_numbers.append(item.serial)
+
+        if len(serial_numbers) > 0:
+            return ", ".join(serial_numbers)
+        else:
+            return "-"
