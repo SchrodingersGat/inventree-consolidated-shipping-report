@@ -24,40 +24,28 @@ class ConsolidatedShipmentLines(ReportMixin, SettingsMixin, InvenTreePlugin):
     )
     LICENSE = "MIT"
 
-    # Optionally specify supported InvenTree versions
-    # MIN_VERSION = '0.18.0'
-    # MAX_VERSION = '2.0.0'
+    MIN_VERSION = "1.0.0"
+    MAX_VERSION = "2.0.0"
 
     # Plugin settings (from SettingsMixin)
-    # Ref: https://docs.inventree.org/en/latest/plugins/mixins/settings/
-    SETTINGS = {
-        # Define your plugin settings here...
-        "CUSTOM_VALUE": {
-            "name": "Custom Value",
-            "description": "A custom value",
-            "validator": int,
-            "default": 42,
-        }
-    }
-
-    # Custom report context (from ReportMixin)
-    # Ref: https://docs.inventree.org/en/latest/plugins/mixins/report/
-    def add_label_context(
-        self, label_instance, model_instance, request, context, **kwargs
-    ):
-        """Add custom context data to a label rendering context."""
-
-        # Add custom context data to the label rendering context
-        context["foo"] = "label_bar"
+    SETTINGS = {}
 
     def add_report_context(
         self, report_instance, model_instance, request, context, **kwargs
     ):
         """Add custom context data to a report rendering context."""
 
-        # Add custom context data to the report rendering context
-        context["foo"] = "report_bar"
+        from order.models import SalesOrderShipment
 
-    def report_callback(self, template, instance, report, request, **kwargs):
-        """Callback function called after a report is generated."""
-        ...
+        if isinstance(model_instance, SalesOrderShipment):
+            context["consolidated_line_items"] = self.consolidated_line_items(
+                model_instance
+            )
+
+    def consolidated_line_items(self, shipment):
+        """Generate consolidated line items for a given SalesOrderShipment instance."""
+
+        print("Generating consolidated line items...")
+        print("- shipment:", shipment)
+
+        return {}
