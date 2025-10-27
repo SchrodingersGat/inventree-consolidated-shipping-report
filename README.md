@@ -1,4 +1,5 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PyPI](https://img.shields.io/pypi/v/inventree-consolidated-shipping-report)](https://pypi.org/project/inventree-consolidated-shipping-report/)
 ![PEP](https://github.com/SchrodingersGat/inventree-consolidated-shipping-report/actions/workflows/ci.yaml/badge.svg)
 
 # Consolidated Shipment Lines
