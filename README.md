@@ -21,7 +21,7 @@ The recommended installation method is via the InvenTree Plugin Manager.
 To install manually via the command line, run the following command:
 
 ```bash
-pip install consolidated-shipment-lines
+pip install inventree-consolidated-shipment-lines
 ```
 
 ## Configuration
