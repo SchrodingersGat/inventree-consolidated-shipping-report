@@ -45,7 +45,7 @@ This `consolidated_line_items` variable is a list of Python dict objects, where 
 
 The list of consolidated line items can be iterated over in the report template to generate custom reports:
 
-```html
+```django
 
 <table>
     <thead>
