@@ -37,10 +37,30 @@ class ConsolidatedShipmentLines(ReportMixin, SettingsMixin, InvenTreePlugin):
 
         from order.models import SalesOrderShipment
 
-        if isinstance(model_instance, SalesOrderShipment):
-            context["consolidated_line_items"] = self.consolidated_line_items(
-                model_instance
-            )
+        # Ignore if are not rendering a SalesOrderShipment report
+        if not isinstance(model_instance, SalesOrderShipment):
+            return
+
+        consolidated_items = self.consolidated_line_items(model_instance)
+
+        consolidated_cost = None
+
+        for item in consolidated_items:
+            line_item = item["line_item"]
+            line_cost = line_item.price
+
+            if line_cost is None or line_cost.amount == 0:
+                continue
+        
+            line_cost *= item["quantity"]
+
+            if consolidated_cost is None:
+                consolidated_cost = line_cost
+            else:
+                consolidated_cost += line_cost
+
+        context["consolidated_line_items"] = consolidated_items
+        context["consolidated_cost"] = consolidated_cost
 
     def consolidated_line_items(self, shipment):
         """Generate consolidated line items for a given SalesOrderShipment instance.
