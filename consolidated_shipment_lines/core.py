@@ -28,7 +28,14 @@ class ConsolidatedShipmentLines(ReportMixin, SettingsMixin, InvenTreePlugin):
     MAX_VERSION = "2.0.0"
 
     # Plugin settings (from SettingsMixin)
-    SETTINGS = {}
+    SETTINGS = {
+        "GROUP_SERIAL_NUMBERS": {
+            "name": "Group Serial Numbers",
+            "description": "Group sequential serial numbers together in the report output",
+            "validator": bool,
+            "default": True,
+        },
+    }
 
     def add_report_context(
         self, report_instance, model_instance, request, context, **kwargs
@@ -98,19 +105,68 @@ class ConsolidatedShipmentLines(ReportMixin, SettingsMixin, InvenTreePlugin):
         return consolidated_items
 
     def extract_serial_groups(self, stock_items) -> str:
-        """Generate a compact string representation of serial number groups."""
+        """Generate a compact string representation of serial number groups.
+        
+        Groups consecutive numeric serial numbers together (e.g., "1001-1005").
+        Handles non-numeric serial numbers gracefully.
+        """
 
-        # TODO: Support more "intelligent" serial number grouping.
-        #  - e.g. "1001-1005, 1010, 1012-1015"
-
-        serial_numbers = []
-        sorted_items = sorted(stock_items, key=lambda x: x.serial_int)
-
-        for item in sorted_items:
+        serial_items = []
+        
+        # Collect serials from sorted items
+        for item in sorted(stock_items, key=lambda x: x.serial_int):
             if item.serial:
-                serial_numbers.append(item.serial)
-
-        if len(serial_numbers) > 0:
-            return ", ".join(serial_numbers)
-        else:
+                serial_items.append((item.serial, item.serial_int))
+        
+        if not serial_items:
             return "-"
+
+        # No grouping of serial numbers if setting is disabled
+        if not self.get_setting('GROUP_SERIAL_NUMBERS'):
+            return ", ".join(item[0] for item in serial_items)
+        
+        # Group consecutive numeric serials
+        groups = []
+        current_group = [serial_items[0]]
+        
+        for i in range(1, len(serial_items)):
+            current_serial, current_int = serial_items[i]
+            prev_serial, prev_int = serial_items[i-1]
+            
+            # Check if consecutive (assuming numeric types)
+            is_consecutive = False
+            try:
+                is_consecutive = (isinstance(current_int, (int, float)) and 
+                                isinstance(prev_int, (int, float)) and
+                                current_int == prev_int + 1)
+            except (TypeError, ValueError):
+                pass
+            
+            if is_consecutive:
+                current_group.append((current_serial, current_int))
+            else:
+                groups.append(current_group)
+                current_group = [(current_serial, current_int)]
+        
+        groups.append(current_group)
+        
+        # Format groups
+        formatted_groups = []
+        for group in groups:
+            if len(group) < 3:
+                # For small groups, list individual serials
+                for item in group:
+                    formatted_groups.append(item[0])
+            else:
+                # Check if numeric range
+                try:
+                    if all(isinstance(item[1], (int, float)) for item in group):
+                        first = int(group[0][1])
+                        last = int(group[-1][1])
+                        formatted_groups.append(f"{first}-{last}")
+                    else:
+                        formatted_groups.append(", ".join(item[0] for item in group))
+                except (TypeError, ValueError):
+                    formatted_groups.append(", ".join(item[0] for item in group))
+        
+        return ", ".join(formatted_groups)
