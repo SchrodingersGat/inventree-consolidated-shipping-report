@@ -37,6 +37,19 @@ class ConsolidatedShipmentLines(ReportMixin, SettingsMixin, InvenTreePlugin):
         },
     }
 
+    def get_int_field(self, line, reference):
+        """Extract a reference value from a consolidated line, attempt to return as integer."""
+        value = getattr(line, reference, None)
+        if value is None:
+            return None
+
+        try:
+            value = int(value)
+        except (ValueError, TypeError):
+            pass
+
+        return value
+
     def add_report_context(
         self, report_instance, model_instance, request, context, **kwargs
     ):
@@ -70,9 +83,9 @@ class ConsolidatedShipmentLines(ReportMixin, SettingsMixin, InvenTreePlugin):
         consolidated_items = sorted(
             consolidated_items,
             key=lambda x: (
-                getattr(x["line_item"], "line", None),
-                getattr(x["line_item"], "reference", None),
-                getattr(x["line_item"], "id", None),
+                self.get_int_field(x["line_item"], "line"),
+                self.get_int_field(x["line_item"], "reference"),
+                self.get_int_field(x["line_item"], "id"),
             ),
         )
 
