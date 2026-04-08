@@ -58,13 +58,23 @@ class ConsolidatedShipmentLines(ReportMixin, SettingsMixin, InvenTreePlugin):
 
             if line_cost is None or line_cost.amount == 0:
                 continue
-        
+
             line_cost *= item["quantity"]
 
             if consolidated_cost is None:
                 consolidated_cost = line_cost
             else:
                 consolidated_cost += line_cost
+
+        # Sort the consolidated line items by line item ID to ensure consistent ordering
+        consolidated_items = sorted(
+            consolidated_items,
+            key=lambda x: (
+                getattr(x["line_item"], "line", None),
+                getattr(x["line_item"], "reference", None),
+                getattr(x["line_item"], "id", None),
+            ),
+        )
 
         context["consolidated_line_items"] = consolidated_items
         context["consolidated_cost"] = consolidated_cost
@@ -106,50 +116,52 @@ class ConsolidatedShipmentLines(ReportMixin, SettingsMixin, InvenTreePlugin):
 
     def extract_serial_groups(self, stock_items) -> str:
         """Generate a compact string representation of serial number groups.
-        
+
         Groups consecutive numeric serial numbers together (e.g., "1001-1005").
         Handles non-numeric serial numbers gracefully.
         """
 
         serial_items = []
-        
+
         # Collect serials from sorted items
         for item in sorted(stock_items, key=lambda x: x.serial_int):
             if item.serial:
                 serial_items.append((item.serial, item.serial_int))
-        
+
         if not serial_items:
             return "-"
 
         # No grouping of serial numbers if setting is disabled
-        if not self.get_setting('GROUP_SERIAL_NUMBERS'):
+        if not self.get_setting("GROUP_SERIAL_NUMBERS"):
             return ", ".join(item[0] for item in serial_items)
-        
+
         # Group consecutive numeric serials
         groups = []
         current_group = [serial_items[0]]
-        
+
         for i in range(1, len(serial_items)):
             current_serial, current_int = serial_items[i]
-            prev_serial, prev_int = serial_items[i-1]
-            
+            prev_serial, prev_int = serial_items[i - 1]
+
             # Check if consecutive (assuming numeric types)
             is_consecutive = False
             try:
-                is_consecutive = (isinstance(current_int, (int, float)) and 
-                                isinstance(prev_int, (int, float)) and
-                                current_int == prev_int + 1)
+                is_consecutive = (
+                    isinstance(current_int, (int, float))
+                    and isinstance(prev_int, (int, float))
+                    and current_int == prev_int + 1
+                )
             except (TypeError, ValueError):
                 pass
-            
+
             if is_consecutive:
                 current_group.append((current_serial, current_int))
             else:
                 groups.append(current_group)
                 current_group = [(current_serial, current_int)]
-        
+
         groups.append(current_group)
-        
+
         # Format groups
         formatted_groups = []
         for group in groups:
@@ -168,5 +180,5 @@ class ConsolidatedShipmentLines(ReportMixin, SettingsMixin, InvenTreePlugin):
                         formatted_groups.append(", ".join(item[0] for item in group))
                 except (TypeError, ValueError):
                     formatted_groups.append(", ".join(item[0] for item in group))
-        
+
         return ", ".join(formatted_groups)
