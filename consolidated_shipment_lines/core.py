@@ -48,7 +48,11 @@ class ConsolidatedShipmentLines(ReportMixin, SettingsMixin, InvenTreePlugin):
         except (ValueError, TypeError):
             pass
 
-        return value
+        # Pad with zeroes for consistent sorting (assuming max 9999)
+        if isinstance(value, int):
+            return f"{value:04d}"
+        else:
+            return str(value)
 
     def add_report_context(
         self, report_instance, model_instance, request, context, **kwargs
